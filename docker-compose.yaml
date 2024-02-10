@@ -1,3 +1,4 @@
+version: '3.5'
 services:
   api01: &api
     image: rinha:0.0.1-SNAPSHOT
@@ -22,7 +23,7 @@ services:
       - SERVER_PORT=8081
 
   cassandra:
-    image: 'cassandra:2.1.20'
+    image: 'cassandra:3.11.16'#2.1.20
     container_name: rinha_cassandra
     network_mode: host
     environment:
