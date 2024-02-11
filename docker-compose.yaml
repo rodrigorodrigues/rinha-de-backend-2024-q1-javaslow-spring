@@ -1,62 +1,75 @@
 version: '3.5'
 services:
   api01: &api
-    image: rinha:0.0.1-SNAPSHOT
-    network_mode: host
+    image: fielcapao/rinha-backend-2024q1-javaslow-spring:0.0.1-SNAPSHOT
     container_name: rinha_backend_1
     environment:
       - SERVER_PORT=8080
+      - SPRING_CASSANDRA_CONTACT_POINTS=cassandra
       - SPRING_CASSANDRA_LOCAL_DATACENTER=datacenter1
-      - SPRING_CASSANDRA_KEYSPACE=rinha
+      - SPRING_CASSANDRA_KEYSPACE_NAME=rinha
+      - SPRING_THREADS_VIRTUAL_ENABLED=true
     depends_on:
       - cassandra
+    healthcheck:
+      test: "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"
+      interval: 2s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
     deploy:
       resources:
         limits:
-          cpus: "0.4"
+          cpus: "0.5"
           memory: "60MB"
 
   api02:
     <<: *api
     container_name: rinha_backend_2
     environment:
-      - SERVER_PORT=8081
+      - SERVER_PORT=8080
+      - SPRING_CASSANDRA_CONTACT_POINTS=cassandra
+      - SPRING_CASSANDRA_LOCAL_DATACENTER=datacenter1
+      - SPRING_CASSANDRA_KEYSPACE_NAME=rinha
+      - SPRING_THREADS_VIRTUAL_ENABLED=true
 
   cassandra:
     image: 'cassandra:3.11.16'#2.1.20
     container_name: rinha_cassandra
-    network_mode: host
     environment:
-      #      - 'CASSANDRA_DC=dc1'
-      #      - 'CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch'
-      #      - 'JVM_OPTS=-XX:+UseG1GC'
-      - 'HEAP_NEWSIZE=128M'
-      - 'MAX_HEAP_SIZE=400M'
+      - HEAP_NEWSIZE=128M
+      - MAX_HEAP_SIZE=350M
     volumes:
       - ./db-init.sh:/db-init.sh
       - ./src/main/resources/schema.cql:/tmp/schema.cql
     command: "sh /db-init.sh"
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
-    ports:
-      - '9042:9042'
+#    ports:
+#      - '9042:9042'
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: "400MB"
+          cpus: "0.4"
+          memory: "350MB"
 
   nginx:
     image: nginx:latest
     container_name: rinha_nginx
-    network_mode: host
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api01
       - api02
+    ports:
+      - '9999:9999'
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.1"
           memory: "30MB"
+
+networks:
+  default:
+    driver: bridge
+    name: rinha-nginx-2024q1

@@ -9,14 +9,18 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>rinha</artifactId>
+    <artifactId>rinha-backend-2024q1-javaslow-spring</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>rinha-backend-2024q1</name>
-    <description>rinha</description>
+    <name>rinha-backend-2024q1-javaslow-spring</name>
+    <description>rinha-backend-2024q1-javaslow-spring</description>
     <properties>
         <java.version>21</java.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
@@ -61,13 +65,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-<!--
-                <configuration>
-                    <image>
-                        <builder>dashaun/builder:tiny</builder>
-                    </image>
-                </configuration>
--->
             </plugin>
         </plugins>
     </build>

@@ -10,11 +10,14 @@ import org.hibernate.validator.constraints.Length;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class AccountController {
@@ -74,5 +77,11 @@ public class AccountController {
         public TransactionResponse(Account account) {
             this(account.creditLimit(), account.balance());
         }
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ResponseEntity<Map<String, String>> handleDuplicateKeyException(MethodArgumentNotValidException e) {
+        return ResponseEntity.unprocessableEntity()
+                .body(Collections.singletonMap("error", e.getBody().getDetail()));
     }
 }

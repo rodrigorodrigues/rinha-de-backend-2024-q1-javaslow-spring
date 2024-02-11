@@ -60,6 +60,11 @@ class RinhaApplicationTests {
                         .content(objectMapper.writeValueAsString(new AccountController.TransactionRequest(500, "c", "Test"))))
                 .andExpect(status().isNotFound());
 
+        mockMvc.perform(post("/clientes/6/transacoes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AccountController.TransactionRequest(-10, "a", null))))
+                .andExpect(status().is4xxClientError());
+
         String response = mockMvc.perform(get("/clientes/1/extrato"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.saldo.limite").isNotEmpty())
