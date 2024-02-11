@@ -10,6 +10,7 @@ import org.hibernate.validator.constraints.Length;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -79,9 +80,9 @@ public class AccountController {
         }
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    ResponseEntity<Map<String, String>> handleDuplicateKeyException(MethodArgumentNotValidException e) {
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    ResponseEntity<Map<String, String>> badRequestException(Exception e) {
         return ResponseEntity.unprocessableEntity()
-                .body(Collections.singletonMap("error", e.getBody().getDetail()));
+                .body(Collections.singletonMap("error", e.getLocalizedMessage()));
     }
 }

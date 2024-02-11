@@ -20,7 +20,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "spring.cassandra.keyspace-name=rinha")
+@SpringBootTest(properties = {"spring.cassandra.keyspace-name=rinha",
+        "logging.level.org.springframework.web=trace", "server.error.include-message=always", "server.error.include-exception=true"})
 @AutoConfigureMockMvc
 @Testcontainers
 class RinhaApplicationTests {
@@ -63,22 +64,22 @@ class RinhaApplicationTests {
         mockMvc.perform(post("/clientes/5/transacoes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new AccountController.TransactionRequest(-10, "a", null))))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is(422));
 
         mockMvc.perform(post("/clientes/5/transacoes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"valor\": 1.2, \"tipo\": \"d\", \"descricao\": \"devolve\"}"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is(422));
 
         mockMvc.perform(post("/clientes/5/transacoes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"valor\": 1, \"tipo\": \"x\", \"descricao\": \"devolve\"}"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is(422));
 
         mockMvc.perform(post("/clientes/5/transacoes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"valor\": 1, \"tipo\": \"c\", \"descricao\": \"123456789 e mais um pouco\"}"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is(422));
 
         String response = mockMvc.perform(get("/clientes/1/extrato"))
                 .andExpect(status().isOk())
