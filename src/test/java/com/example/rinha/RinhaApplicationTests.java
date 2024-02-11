@@ -60,9 +60,24 @@ class RinhaApplicationTests {
                         .content(objectMapper.writeValueAsString(new AccountController.TransactionRequest(500, "c", "Test"))))
                 .andExpect(status().isNotFound());
 
-        mockMvc.perform(post("/clientes/6/transacoes")
+        mockMvc.perform(post("/clientes/5/transacoes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new AccountController.TransactionRequest(-10, "a", null))))
+                .andExpect(status().is4xxClientError());
+
+        mockMvc.perform(post("/clientes/5/transacoes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"valor\": 1.2, \"tipo\": \"d\", \"descricao\": \"devolve\"}"))
+                .andExpect(status().is4xxClientError());
+
+        mockMvc.perform(post("/clientes/5/transacoes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"valor\": 1, \"tipo\": \"x\", \"descricao\": \"devolve\"}"))
+                .andExpect(status().is4xxClientError());
+
+        mockMvc.perform(post("/clientes/5/transacoes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"valor\": 1, \"tipo\": \"c\", \"descricao\": \"123456789 e mais um pouco\"}"))
                 .andExpect(status().is4xxClientError());
 
         String response = mockMvc.perform(get("/clientes/1/extrato"))

@@ -16,6 +16,13 @@ Submissão feita com:
 
 [@fielcapao](https://twitter.com/fielcapao) @ twitter
 
+
 ## Installation
+
+Pra gerar a image native `mvn clean package -Pnative spring-boot:build-image` e precisa [GraalVM 21](https://www.graalvm.org/downloads/)
+
+Pra gerar somente a docker image use `mvn clean package spring-boot:build-image`.
+
+## Execution
 
 `docker-compose up -d` precisa esperar um pouco ate Cassandra subir(use pra saber quando API is ready http://localhost:9999/actuator/health)

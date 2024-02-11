@@ -1,7 +1,7 @@
 version: '3.5'
 services:
   api01: &api
-    image: fielcapao/rinha-backend-2024q1-javaslow-spring:0.0.1-SNAPSHOT
+    image: fielcapao/rinha-backend-2024q1-javaslow-spring:latest
     container_name: rinha_backend_1
     environment:
       - SERVER_PORT=8080
@@ -11,9 +11,10 @@ services:
       - SPRING_THREADS_VIRTUAL_ENABLED=true
     depends_on:
       - cassandra
+    restart: on-failure
     healthcheck:
       test: "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"
-      interval: 2s
+      interval: 5s
       timeout: 3s
       retries: 5
       start_period: 2s
