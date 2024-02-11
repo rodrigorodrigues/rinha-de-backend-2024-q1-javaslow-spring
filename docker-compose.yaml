@@ -26,19 +26,13 @@ services:
   api02:
     <<: *api
     container_name: rinha_backend_2
-    environment:
-      - SERVER_PORT=8080
-      - SPRING_CASSANDRA_CONTACT_POINTS=cassandra
-      - SPRING_CASSANDRA_LOCAL_DATACENTER=datacenter1
-      - SPRING_CASSANDRA_KEYSPACE_NAME=rinha
-      - SPRING_THREADS_VIRTUAL_ENABLED=true
 
   cassandra:
     image: 'cassandra:3.11.16'#2.1.20
     container_name: rinha_cassandra
     environment:
       - HEAP_NEWSIZE=128M
-      - MAX_HEAP_SIZE=350M
+      - MAX_HEAP_SIZE=400M
     volumes:
       - ./db-init.sh:/db-init.sh
       - ./src/main/resources/schema.cql:/tmp/schema.cql
@@ -51,7 +45,7 @@ services:
       resources:
         limits:
           cpus: "0.4"
-          memory: "350MB"
+          memory: "400MB"
 
   nginx:
     image: nginx:latest
