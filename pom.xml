@@ -61,6 +61,13 @@
             <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
+                <configuration>
+                    <buildArgs>
+                        <buildArg>--enable-monitoring=all</buildArg>
+                        <buildArg>--pgo=default.iprof</buildArg>
+                        <buildArg>--gc=G1</buildArg>
+                    </buildArgs>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
