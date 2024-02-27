@@ -3,8 +3,10 @@ package com.example.rinha;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.metadata.Node;
 import com.datastax.oss.driver.api.core.metadata.NodeState;
+import com.example.rinha.dto.TransactionRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +27,7 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
 
 @SpringBootApplication
+@RegisterReflectionForBinding(TransactionRequest.class)
 public class RinhaApplication {
 
     public static void main(String[] args) {

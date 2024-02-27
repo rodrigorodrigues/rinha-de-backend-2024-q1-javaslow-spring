@@ -68,6 +68,3 @@ networks:
   default:
     driver: bridge
     name: rinha-nginx-2024q1
-
-volumes:
-  yugabyte_db:
