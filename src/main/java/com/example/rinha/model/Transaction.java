@@ -15,15 +15,13 @@ public record Transaction(@Id @JsonIgnore @NotNull Integer accountId,
                    @NotBlank @Length(max = 10) @JsonProperty("descricao") String description,
                     @NotNull @JsonProperty("realizada_em") Instant date,
                           @NotNull @JsonProperty("valor") Integer amount,
-                          @JsonIgnore @NotNull Long dateMillis,
-                          @JsonIgnore @NotNull Integer lastStatementBalance) {
-    public Transaction(TransactionRequest transactionRequest, Integer accountId, Instant date, Integer lastStatementBalance) {
+                          @JsonIgnore @NotNull Long dateMillis) {
+    public Transaction(TransactionRequest transactionRequest, Integer accountId, Instant date) {
         this(accountId,
                 transactionRequest.type(),
                 transactionRequest.description(),
                 date,
                 transactionRequest.amount(),
-                date.toEpochMilli(),
-                lastStatementBalance);
+                date.toEpochMilli());
     }
 }

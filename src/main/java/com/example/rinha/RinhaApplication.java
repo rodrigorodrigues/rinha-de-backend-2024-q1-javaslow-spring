@@ -4,11 +4,15 @@ import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.metadata.Node;
 import com.datastax.oss.driver.api.core.metadata.NodeState;
 import com.example.rinha.dto.TransactionRequest;
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.util.JsonRecyclerPools;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.cassandra.ReactiveSessionFactory;
 import org.springframework.data.cassandra.core.cql.ReactiveCqlTemplate;
@@ -45,6 +49,13 @@ public class RinhaApplication {
         return RouterFunctions.route(POST("/clientes/{accountId}/transacoes"), handler::handlePostRequest)
                 .andRoute(GET("/clientes/{accountId}/extrato"), handler::handleGetRequest)
                 .andRoute(GET("/health"), request -> healthEndpoint(session, objectMapper));
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "spring.threads.virtual.enabled", havingValue = "true")
+    Jackson2ObjectMapperBuilderCustomizer loomCustomizer() {
+        var jsonFactory = JsonFactory.builder().recyclerPool(JsonRecyclerPools.sharedLockFreePool()).build();
+        return builder -> builder.factory(jsonFactory);
     }
 
     private Mono<ServerResponse> healthEndpoint(CqlSession session, ObjectMapper objectMapper) {

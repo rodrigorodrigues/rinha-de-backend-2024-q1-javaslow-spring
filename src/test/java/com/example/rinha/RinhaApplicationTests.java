@@ -55,6 +55,13 @@ class RinhaApplicationTests {
     @AfterEach
     void tearDown() {
         session.execute("TRUNCATE rinha.transactions");
+        session.execute("TRUNCATE rinha.accounts_balance");
+
+        session.execute("UPDATE rinha.accounts_balance SET total = total + 0 WHERE accountId = 1");
+        session.execute("UPDATE rinha.accounts_balance SET total = total + 0 WHERE accountId = 2");
+        session.execute("UPDATE rinha.accounts_balance SET total = total + 0 WHERE accountId = 3");
+        session.execute("UPDATE rinha.accounts_balance SET total = total + 0 WHERE accountId = 4");
+        session.execute("UPDATE rinha.accounts_balance SET total = total + 0 WHERE accountId = 5");
     }
 
     @Test

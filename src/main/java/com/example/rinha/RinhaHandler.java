@@ -22,7 +22,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.time.Instant;
 import java.util.AbstractMap;
@@ -53,11 +52,11 @@ public class RinhaHandler {
     }
 
     public Mono<ServerResponse> handleGetRequest(ServerRequest request) {
-        var accountId = getAccountIdByRequestParam(request);
+        var accountId = getLimitByAccountId(request).clientId();
         log.debug("handleGetRequest: {}", request);
         return Mono.zip(rinhaRepository.findLastTransactionsByAccountId(accountId).collectList(), rinhaRepository.totalBalanceByAccountId(accountId))
                 .flatMap(p -> {
-                    var balance = new BalanceResponse.Balance(p.getT2(), Instant.now(), getLimitByAccountId(request));
+                    var balance = new BalanceResponse.Balance(p.getT2(), Instant.now(), getLimitByAccountId(request).creditLimit());
                     log.debug("getLastTransactions:balance: {}", balance);
                     return ServerResponse.ok()
                             .contentType(MediaType.APPLICATION_JSON)
@@ -66,61 +65,50 @@ public class RinhaHandler {
     }
 
     public Mono<ServerResponse> handlePostRequest(ServerRequest request) {
+        var account = getLimitByAccountId(request);
         log.debug("handlePostRequest: {}", request);
-        return Mono.zip(processRequest(request), rinhaRepository.totalBalanceByAccountId(getAccountIdByRequestParam(request)))
-                .flatMap(abt -> {
-                    var transactionRequest = abt.getT1();
-                    int total = abt.getT2();
-                    var creditLimit = getLimitByAccountId(request);
-                    var accountId = getAccountIdByRequestParam(request);
-                    var amount = transactionRequest.amount();
+        return processRequest(request, account)
+                .flatMap(transactionRequest -> rinhaRepository.totalBalanceByAccountId(account.clientId())
+                        .flatMap(total -> {
+                            if (transactionRequest.type().equals("d") && (transactionRequest.amount() + Math.abs(total)) > account.creditLimit()) {
+                                return rinhaRepository.updateAccountBalance(transactionRequest.amount(), account.clientId())
+                                        .flatMap(p -> Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY)));
+                            }
 
-                    if (transactionRequest.type().equals("d")) {
-                        if ((amount + Math.abs(total)) > creditLimit){
-                            return Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY));
-                        }
-                        amount = -amount;
-                    }
-                    var lastStatementBalance = amount + total;
-                    return rinhaRepository.saveTransaction(new Transaction(transactionRequest, accountId, Instant.now(), lastStatementBalance))
-                            .map(b -> new TransactionResponse(creditLimit, lastStatementBalance));
-                })
+                            return rinhaRepository.saveTransaction(new Transaction(transactionRequest, account.clientId(), Instant.now()))
+                                    .map(t -> new TransactionResponse(account.creditLimit(), total));
+                        }))
                 .flatMap(response -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(response));
     }
 
-    private Mono<TransactionRequest> processRequest(ServerRequest request) {
+    private Mono<TransactionRequest> processRequest(ServerRequest request, KeyPair account) {
         return request
                 .bodyToMono(TransactionRequest.class)
-                .publishOn(Schedulers.boundedElastic())
-                .handle((body, sink) -> {
-
-                    Integer creditLimit = getLimitByAccountId(request);
-
-                    Set<ConstraintViolation<TransactionRequest>> errors = validator.validate(body);
+                .flatMap(transactionRequest -> {
+                    Set<ConstraintViolation<TransactionRequest>> errors = validator.validate(transactionRequest);
 
                     if (!errors.isEmpty()) {
-                        sink.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Found invalid data"));
                         log.debug("Bad Request: {}", errors);
-                        return;
-                    } else if (body.type().equals("d") && body.amount() > creditLimit) {
-                        sink.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Debit is greater than allowed"));
-                        return;
+                        return Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Found invalid data"));
+                    } else if (transactionRequest.type().equals("d") && transactionRequest.amount() > account.creditLimit()) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Debit is greater than allowed"));
                     }
 
-                    log.debug("issuer:transactionRequest: {}", body);
+                    log.debug("issuer:transactionRequest: {}", transactionRequest);
 
-                    sink.next(body);
+                    return rinhaRepository.updateAccountBalance((transactionRequest.type().equals("d") ? -transactionRequest.amount() : transactionRequest.amount()), account.clientId())
+                                        .map(p -> transactionRequest);
                 });
     }
 
-    private Integer getLimitByAccountId(ServerRequest request) {
+    private KeyPair getLimitByAccountId(ServerRequest request) {
         Integer accountId = getAccountIdByRequestParam(request);
         if (!accounts.containsKey(accountId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
-        return accounts.get(accountId);
+        return new KeyPair(accountId, accounts.get(accountId));
     }
 
     private Integer getAccountIdByRequestParam(ServerRequest request) {
@@ -138,5 +126,7 @@ public class RinhaHandler {
         return ResponseEntity.unprocessableEntity()
                 .body(Collections.singletonMap("error", e.getLocalizedMessage()));
     }
+
+    private record KeyPair(Integer clientId, Integer creditLimit) {}
 
 }

@@ -24,28 +24,30 @@ public class RinhaRepository {
                                 row.getString("description"),
                                 row.getInstant("date"),
                                 row.getInt("amount"),
-                                row.getLong("dateMillis"),
-                                -1),
+                                row.getLong("dateMillis")),
                 accountId,
                 Instant.now().minusSeconds(10).toEpochMilli(),
                 Instant.now().toEpochMilli());
     }
 
     public Mono<Transaction> saveTransaction(Transaction transaction) {
-        return reactiveCqlTemplate.execute("INSERT INTO rinha.transactions(accountId, type, description, date, amount, dateMillis, lastStatementBalance) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        return reactiveCqlTemplate.execute("INSERT INTO rinha.transactions(accountId, type, description, date, amount, dateMillis) VALUES (?, ?, ?, ?, ?, ?)",
                 transaction.accountId(),
                         transaction.type(),
                         transaction.description(),
                         transaction.date(),
                         transaction.amount(),
-                        transaction.dateMillis(),
-                        transaction.lastStatementBalance())
+                        transaction.dateMillis())
                 .thenReturn(transaction);
     }
 
+    public Mono<Boolean> updateAccountBalance(Integer amount, Integer id) {
+        return reactiveCqlTemplate.execute("UPDATE rinha.accounts_balance SET total = total + ? WHERE accountId = ?",
+                        (long) amount, id);
+    }
+
     public Mono<Integer> totalBalanceByAccountId(Integer id) {
-        return reactiveCqlTemplate.queryForObject("SELECT lastStatementBalance FROM rinha.transactions WHERE accountId = ? LIMIT 1", Integer.class,
-                        id)
-                .switchIfEmpty(Mono.just(0));
+        return reactiveCqlTemplate.queryForObject("SELECT total FROM rinha.accounts_balance WHERE accountId = ?", Long.class, id)
+                .map(Long::intValue);
     }
 }
