@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.cassandra.ReactiveSessionFactory;
@@ -52,7 +51,6 @@ public class RinhaApplication {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "spring.threads.virtual.enabled", havingValue = "true")
     Jackson2ObjectMapperBuilderCustomizer loomCustomizer() {
         var jsonFactory = JsonFactory.builder().recyclerPool(JsonRecyclerPools.sharedLockFreePool()).build();
         return builder -> builder.factory(jsonFactory);

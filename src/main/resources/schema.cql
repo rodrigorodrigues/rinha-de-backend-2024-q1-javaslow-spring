@@ -6,7 +6,7 @@ CREATE TABLE rinha.accounts_balance (
     accountId int,
     total counter,
     PRIMARY KEY (accountId)
-);
+) WITH compression = {'class': 'LZ4Compressor', 'chunk_length_in_kb': 2, 'crc_check_chance': 0.1};
 
 CREATE TABLE IF NOT EXISTS rinha.transactions (
     accountId int,

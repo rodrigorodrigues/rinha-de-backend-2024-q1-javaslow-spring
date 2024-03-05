@@ -22,6 +22,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 import java.time.Instant;
 import java.util.AbstractMap;
@@ -68,25 +69,22 @@ public class RinhaHandler {
         var account = getLimitByAccountId(request);
         log.debug("handlePostRequest: {}", request);
         return processRequest(request, account)
-                .flatMap(transactionRequest -> rinhaRepository.totalBalanceByAccountId(account.clientId())
-                        .flatMap(total -> {
-                            if (transactionRequest.type().equals("d") && (transactionRequest.amount() + Math.abs(total)) > account.creditLimit()) {
-                                return rinhaRepository.updateAccountBalance(transactionRequest.amount(), account.clientId())
-                                        .flatMap(p -> Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY)));
-                            }
+                .flatMap(tuple2 -> {
+                    var total = tuple2.getT2();
+                    var transactionRequest = tuple2.getT1();
 
-                            return rinhaRepository.saveTransaction(new Transaction(transactionRequest, account.clientId(), Instant.now()))
-                                    .map(t -> new TransactionResponse(account.creditLimit(), total));
-                        }))
+                    return rinhaRepository.saveTransaction(new Transaction(transactionRequest, account.clientId(), Instant.now()))
+                            .map(t -> new TransactionResponse(account.creditLimit(), total));
+                })
                 .flatMap(response -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(response));
     }
 
-    private Mono<TransactionRequest> processRequest(ServerRequest request, KeyPair account) {
+    private Mono<Tuple2<TransactionRequest, Integer>> processRequest(ServerRequest request, KeyPair account) {
         return request
                 .bodyToMono(TransactionRequest.class)
-                .flatMap(transactionRequest -> {
+                .zipWhen(transactionRequest -> {
                     Set<ConstraintViolation<TransactionRequest>> errors = validator.validate(transactionRequest);
 
                     if (!errors.isEmpty()) {
@@ -98,8 +96,15 @@ public class RinhaHandler {
 
                     log.debug("issuer:transactionRequest: {}", transactionRequest);
 
-                    return rinhaRepository.updateAccountBalance((transactionRequest.type().equals("d") ? -transactionRequest.amount() : transactionRequest.amount()), account.clientId())
-                                        .map(p -> transactionRequest);
+                    return rinhaRepository.totalBalanceByAccountId(account.clientId())
+                            .flatMap(total -> {
+                                var amount = (transactionRequest.type().equals("d") ? -transactionRequest.amount() : transactionRequest.amount());
+                                if (transactionRequest.type().equals("d") && (transactionRequest.amount() + Math.abs(total)) > account.creditLimit()) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY));
+                                }
+                                return rinhaRepository.updateAccountBalance(amount, account.clientId())
+                                        .flatMap(p -> Mono.just(amount + total));
+                            });
                 });
     }
 
