@@ -1,6 +1,8 @@
 package com.example.rinha;
 
 import com.example.rinha.model.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.cassandra.core.cql.ReactiveCqlTemplate;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
@@ -10,6 +12,7 @@ import java.time.Instant;
 
 @Repository
 public class RinhaRepository {
+    private final Logger log = LoggerFactory.getLogger(RinhaRepository.class);
     private final ReactiveCqlTemplate reactiveCqlTemplate;
 
     public RinhaRepository(ReactiveCqlTemplate reactiveCqlTemplate) {
@@ -42,11 +45,13 @@ public class RinhaRepository {
     }
 
     public Mono<Boolean> updateAccountBalance(Integer amount, Integer id) {
+        log.debug("Updating updateAccountBalance: {}={}", amount, id);
         return reactiveCqlTemplate.execute("UPDATE rinha.accounts_balance SET total = total + ? WHERE accountId = ?",
                         (long) amount, id);
     }
 
     public Mono<Integer> totalBalanceByAccountId(Integer id) {
+        log.debug("Getting totalBalanceByAccountId: {}", id);
         return reactiveCqlTemplate.queryForObject("SELECT total FROM rinha.accounts_balance WHERE accountId = ?", Long.class, id)
                 .map(Long::intValue);
     }

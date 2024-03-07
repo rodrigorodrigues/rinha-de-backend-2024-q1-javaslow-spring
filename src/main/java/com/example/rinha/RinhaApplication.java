@@ -8,6 +8,8 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.JsonRecyclerPools;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,10 +18,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.cassandra.ReactiveSessionFactory;
 import org.springframework.data.cassandra.core.cql.ReactiveCqlTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.integration.hazelcast.lock.HazelcastLockRegistry;
+import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
 import java.util.Collection;
@@ -34,7 +37,6 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 public class RinhaApplication {
 
     public static void main(String[] args) {
-        Hooks.enableAutomaticContextPropagation();
         SpringApplication.run(RinhaApplication.class, args);
     }
 
@@ -44,7 +46,17 @@ public class RinhaApplication {
     }
 
     @Bean
-    public RouterFunction<ServerResponse> functionalRoute(RinhaHandler handler, CqlSession session, ObjectMapper objectMapper) {
+    public HazelcastInstance hazelcastInstance() {
+        return Hazelcast.newHazelcastInstance();
+    }
+
+    @Bean
+    public LockRegistry lockRegistry() {
+        return new HazelcastLockRegistry(hazelcastInstance());
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> routes(RinhaHandler handler, CqlSession session, ObjectMapper objectMapper) {
         return RouterFunctions.route(POST("/clientes/{accountId}/transacoes"), handler::handlePostRequest)
                 .andRoute(GET("/clientes/{accountId}/extrato"), handler::handleGetRequest)
                 .andRoute(GET("/health"), request -> healthEndpoint(session, objectMapper));
