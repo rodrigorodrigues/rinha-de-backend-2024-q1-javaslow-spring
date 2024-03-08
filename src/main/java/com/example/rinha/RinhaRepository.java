@@ -1,5 +1,6 @@
 package com.example.rinha;
 
+import com.example.rinha.dto.KeyPairValue;
 import com.example.rinha.model.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,15 +45,23 @@ public class RinhaRepository {
                 .thenReturn(transaction);
     }
 
+    public Mono<Boolean> updateTemporaryAccountBalance(Integer amount, Integer id) {
+        log.debug("updateTemporaryAccountBalance: {}={}", amount, id);
+        return reactiveCqlTemplate.execute("UPDATE rinha.accounts_balance SET temporary = temporary + ? WHERE accountId = ?",
+                (long) amount, id);
+    }
+
     public Mono<Boolean> updateAccountBalance(Integer amount, Integer id) {
         log.debug("Updating updateAccountBalance: {}={}", amount, id);
         return reactiveCqlTemplate.execute("UPDATE rinha.accounts_balance SET total = total + ? WHERE accountId = ?",
                         (long) amount, id);
     }
 
-    public Mono<Integer> totalBalanceByAccountId(Integer id) {
+
+    public Mono<KeyPairValue<Long, Long>> totalBalanceByAccountId(Integer id) {
         log.debug("Getting totalBalanceByAccountId: {}", id);
-        return reactiveCqlTemplate.queryForObject("SELECT total FROM rinha.accounts_balance WHERE accountId = ?", Long.class, id)
-                .map(Long::intValue);
+        return reactiveCqlTemplate.queryForObject("SELECT temporary, total FROM rinha.accounts_balance WHERE accountId = ?",
+                        (row, rowNum) -> new KeyPairValue<>(row.getLong("temporary"), row.getLong("total")),
+                        id);
     }
 }

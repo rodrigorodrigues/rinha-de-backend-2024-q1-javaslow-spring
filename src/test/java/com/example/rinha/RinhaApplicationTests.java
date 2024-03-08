@@ -106,7 +106,7 @@ class RinhaApplicationTests {
 
         client.post().uri("/clientes/5/transacoes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .body(fromValue(objectMapper.writeValueAsString(new TransactionRequest(-10, "a", null))))
+                        .body(fromValue(objectMapper.writeValueAsString("{\"valor\": -10, \"tipo\": \"a\", \"descricao\": null}")))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
@@ -183,7 +183,7 @@ class RinhaApplicationTests {
                     .expectBody()
                     .jsonPath("$.saldo.limite").value(equalTo(transactionResponse.creditLimit()))
                     .jsonPath("$.saldo.data_extrato").isNotEmpty()
-                    .jsonPath("$.saldo.total").value(equalTo(transactionResponse.balance()))
+                    .jsonPath("$.saldo.total").value(equalTo(transactionResponse.balance().intValue()))
                     .jsonPath("$.ultimas_transacoes[0].tipo").value(equalTo("c"))
                     .jsonPath("$.ultimas_transacoes[0].valor").value(equalTo(1))
                     .jsonPath("$.ultimas_transacoes[0].descricao").value(equalTo("danada"));

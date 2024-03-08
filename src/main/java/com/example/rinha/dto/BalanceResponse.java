@@ -8,7 +8,7 @@ import java.util.List;
 
 public record BalanceResponse(@JsonProperty("saldo") Balance balance,
                               @JsonProperty("ultimas_transacoes") List<Transaction> lastTransactions) {
-    public record Balance(Integer total, @JsonProperty("data_extrato") Instant instant,
+    public record Balance(Long total, @JsonProperty("data_extrato") Instant instant,
                           @JsonProperty("limite") Integer creditLimit) {
     }
 }
