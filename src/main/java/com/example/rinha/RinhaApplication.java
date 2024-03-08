@@ -8,6 +8,8 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.JsonRecyclerPools;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,6 +18,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.cassandra.ReactiveSessionFactory;
 import org.springframework.data.cassandra.core.cql.ReactiveCqlTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.integration.hazelcast.lock.HazelcastLockRegistry;
+import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -39,6 +43,16 @@ public class RinhaApplication {
     @Bean
     public ReactiveCqlTemplate reactiveCqlTemplate(ReactiveSessionFactory sessionFactory) {
         return new ReactiveCqlTemplate(sessionFactory);
+    }
+
+    @Bean
+    public HazelcastInstance hazelcastInstance() {
+        return Hazelcast.newHazelcastInstance();
+    }
+
+    @Bean
+    public LockRegistry lockRegistry() {
+        return new HazelcastLockRegistry(hazelcastInstance());
     }
 
     @Bean

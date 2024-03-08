@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -35,8 +36,11 @@ public class RinhaHandler {
             new AbstractMap.SimpleEntry<>(4, 10000000),
             new AbstractMap.SimpleEntry<>(5, 500000)
     );
-    public RinhaHandler(RinhaRepository rinhaRepository) {
+    private final LockRegistry lockRegistry;
+
+    public RinhaHandler(RinhaRepository rinhaRepository, LockRegistry lockRegistry) {
         this.rinhaRepository = rinhaRepository;
+        this.lockRegistry = lockRegistry;
     }
 
     public Mono<ServerResponse> handleGetRequest(ServerRequest request) {
@@ -56,7 +60,7 @@ public class RinhaHandler {
         var account = getLimitByAccountId(request);
         log.debug("handlePostRequest: {}", request);
         var clientId = account.key();
-        return Mono.zip(processRequest(request, account), rinhaRepository.totalBalanceByAccountId(clientId))
+        return Mono.zip(processRequest(request, account), getTotalBalance(clientId))
                 .flatMap(tuple -> {
                     var total = tuple.getT2().value();
                     var temporaryTotal = tuple.getT2().key();
@@ -78,6 +82,15 @@ public class RinhaHandler {
                 .flatMap(response -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(response));
+    }
+
+    private Mono<KeyPairValue<Long, Long>> getTotalBalance(Integer clientId) {
+        try {
+            return lockRegistry.executeLocked("lock" + clientId, () -> rinhaRepository.totalBalanceByAccountId(clientId));
+        } catch (InterruptedException e) {
+            log.error("Unexpected error", e);
+            return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error"));
+        }
     }
 
     private Mono<TransactionRequest> processRequest(ServerRequest request, KeyPairValue<Integer, Integer> account) {
