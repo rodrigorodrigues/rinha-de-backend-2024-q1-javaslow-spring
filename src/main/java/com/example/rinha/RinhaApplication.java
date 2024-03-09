@@ -7,7 +7,6 @@ import com.example.rinha.dto.TransactionRequest;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.JsonRecyclerPools;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -26,6 +25,7 @@ import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.server.WebFilter;
 import reactor.core.publisher.Mono;
@@ -68,11 +68,16 @@ public class RinhaApplication {
     }
 
     @Bean
-    WebFilter mappingErrorToUnprocessableEntity() {
+    public WebFilter mappingErrorToUnprocessableEntity() {
         return (exchange, next) -> next.filter(exchange)
                 .onErrorResume(ServerWebInputException.class, e -> {
                     ServerHttpResponse response = exchange.getResponse();
                     response.setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
+                    return response.setComplete();
+                })
+                .onErrorResume(ResponseStatusException.class, e -> {
+                    ServerHttpResponse response = exchange.getResponse();
+                    response.setStatusCode(e.getStatusCode());
                     return response.setComplete();
                 });
     }

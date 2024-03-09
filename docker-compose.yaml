@@ -22,7 +22,7 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: "70MB"
+          memory: "65MB"
 
   api02:
     <<: *api
@@ -32,8 +32,8 @@ services:
     image: 'cassandra:4.0.12'#3.11.16
     container_name: rinha_cassandra
     environment:
-      - HEAP_NEWSIZE=64M
-      - MAX_HEAP_SIZE=256M
+      - HEAP_NEWSIZE=100M
+      - MAX_HEAP_SIZE=400M
     volumes:
       - ./db-init.sh:/db-init.sh
       - ./src/main/resources/schema.cql:/tmp/schema.cql
