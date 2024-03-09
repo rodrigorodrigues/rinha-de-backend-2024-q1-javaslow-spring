@@ -9,12 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,7 +18,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.AbstractMap;
-import java.util.Collections;
 import java.util.Map;
 
 @Component
@@ -60,7 +55,7 @@ public class RinhaHandler {
         var account = getLimitByAccountId(request);
         log.debug("handlePostRequest: {}", request);
         var clientId = account.key();
-        return Mono.zip(processRequest(request, account), getTotalBalance(clientId))
+        return Mono.zip(processRequest(request, account.key()), getTotalBalance(clientId))
                 .flatMap(tuple -> {
                     var total = tuple.getT2().value();
                     var temporaryTotal = tuple.getT2().key();
@@ -93,17 +88,10 @@ public class RinhaHandler {
         }
     }
 
-    private Mono<TransactionRequest> processRequest(ServerRequest request, KeyPairValue<Integer, Integer> account) {
+    private Mono<TransactionRequest> processRequest(ServerRequest request, Integer clientId) {
         return request
                 .bodyToMono(TransactionRequest.class)
                 .flatMap(transactionRequest -> {
-                    var creditLimit = account.value();
-                    var clientId = account.key();
-
-                    if (transactionRequest.type().equals("d") && transactionRequest.amount() > creditLimit) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Debit is greater than allowed"));
-                    }
-
                     log.debug("issuer:transactionRequest: {}", transactionRequest);
 
                     var amount = (transactionRequest.type().equals("d") ? -transactionRequest.amount() : transactionRequest.amount());
@@ -128,12 +116,4 @@ public class RinhaHandler {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
-
-    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
-    ResponseEntity<Map<String, String>> businessException(Exception e) {
-        log.warn("Invalid data", e);
-        return ResponseEntity.unprocessableEntity()
-                .body(Collections.singletonMap("error", e.getLocalizedMessage()));
-    }
-
 }

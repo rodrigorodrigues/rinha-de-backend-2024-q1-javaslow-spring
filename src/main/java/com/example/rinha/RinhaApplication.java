@@ -7,6 +7,7 @@ import com.example.rinha.dto.TransactionRequest;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.JsonRecyclerPools;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -17,12 +18,16 @@ import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilde
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.cassandra.ReactiveSessionFactory;
 import org.springframework.data.cassandra.core.cql.ReactiveCqlTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.integration.hazelcast.lock.HazelcastLockRegistry;
 import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ServerWebInputException;
+import org.springframework.web.server.WebFilter;
 import reactor.core.publisher.Mono;
 
 import java.util.Collection;
@@ -60,6 +65,16 @@ public class RinhaApplication {
         return RouterFunctions.route(POST("/clientes/{accountId}/transacoes"), handler::handlePostRequest)
                 .andRoute(GET("/clientes/{accountId}/extrato"), handler::handleGetRequest)
                 .andRoute(GET("/health"), request -> healthEndpoint(session, objectMapper));
+    }
+
+    @Bean
+    WebFilter mappingErrorToUnprocessableEntity() {
+        return (exchange, next) -> next.filter(exchange)
+                .onErrorResume(ServerWebInputException.class, e -> {
+                    ServerHttpResponse response = exchange.getResponse();
+                    response.setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
+                    return response.setComplete();
+                });
     }
 
     @Bean
