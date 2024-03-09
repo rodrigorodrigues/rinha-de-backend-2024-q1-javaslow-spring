@@ -8,7 +8,6 @@ services:
       - SPRING_CASSANDRA_CONTACT_POINTS=cassandra
       - SPRING_CASSANDRA_LOCAL_DATACENTER=datacenter1
       - SPRING_CASSANDRA_KEYSPACE_NAME=rinha
-      - SPRING_THREADS_VIRTUAL_ENABLED=true
     depends_on:
       - cassandra
     restart: on-failure
