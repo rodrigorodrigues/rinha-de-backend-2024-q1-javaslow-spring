@@ -5,11 +5,11 @@ import com.example.rinha.dto.KeyPairValue;
 import com.example.rinha.dto.TransactionRequest;
 import com.example.rinha.dto.TransactionResponse;
 import com.example.rinha.model.Transaction;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -18,6 +18,9 @@ import reactor.core.publisher.Mono;
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 public class RinhaHandler {
@@ -30,11 +33,16 @@ public class RinhaHandler {
             new AbstractMap.SimpleEntry<>(4, 10000000),
             new AbstractMap.SimpleEntry<>(5, 500000)
     );
-    private final LockRegistry lockRegistry;
+    private final Map<Integer, ExecutorService> executors = Map.ofEntries(
+            new AbstractMap.SimpleEntry<>(1, Executors.newSingleThreadExecutor(new DefaultThreadFactory("client 1"))),
+            new AbstractMap.SimpleEntry<>(2, Executors.newSingleThreadExecutor(new DefaultThreadFactory("client 2"))),
+            new AbstractMap.SimpleEntry<>(3, Executors.newSingleThreadExecutor(new DefaultThreadFactory("client 3"))),
+            new AbstractMap.SimpleEntry<>(4, Executors.newSingleThreadExecutor(new DefaultThreadFactory("client 4"))),
+            new AbstractMap.SimpleEntry<>(5, Executors.newSingleThreadExecutor(new DefaultThreadFactory("client 5")))
+    );
 
-    public RinhaHandler(RinhaRepository rinhaRepository, LockRegistry lockRegistry) {
+    public RinhaHandler(RinhaRepository rinhaRepository) {
         this.rinhaRepository = rinhaRepository;
-        this.lockRegistry = lockRegistry;
     }
 
     public Mono<ServerResponse> handleGetRequest(ServerRequest request) {
@@ -80,8 +88,9 @@ public class RinhaHandler {
 
     private Mono<KeyPairValue<Long, Long>> getTotalBalance(Integer clientId) {
         try {
-            return lockRegistry.executeLocked("lock" + clientId, () -> rinhaRepository.totalBalanceByAccountId(clientId));
-        } catch (InterruptedException e) {
+            return executors.get(clientId).submit(() -> rinhaRepository.totalBalanceByAccountId(clientId))
+                    .get();
+        } catch (InterruptedException | ExecutionException e) {
             log.error("Unexpected error", e);
             return Mono.error(new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR));
         }
