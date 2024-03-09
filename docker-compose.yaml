@@ -29,7 +29,7 @@ services:
     container_name: rinha_backend_2
 
   cassandra:
-    image: 'cassandra:4.0.12'#3.11.16
+    image: 'cassandra:4.0.12'
     container_name: rinha_cassandra
     environment:
       - HEAP_NEWSIZE=100M

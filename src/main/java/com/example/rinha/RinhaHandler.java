@@ -13,7 +13,6 @@ import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
@@ -65,7 +64,7 @@ public class RinhaHandler {
 
                     if (transactionRequest.type().equals("d")) {
                         if ((amount + Math.abs(temporaryTotal)) > account.value()) {
-                            return Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY));
+                            return Mono.error(new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY));
                         }
                         amount = -amount;
                     }
@@ -84,7 +83,7 @@ public class RinhaHandler {
             return lockRegistry.executeLocked("lock" + clientId, () -> rinhaRepository.totalBalanceByAccountId(clientId));
         } catch (InterruptedException e) {
             log.error("Unexpected error", e);
-            return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error"));
+            return Mono.error(new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -103,7 +102,7 @@ public class RinhaHandler {
     private KeyPairValue<Integer, Integer> getLimitByAccountId(ServerRequest request) {
         Integer accountId = getAccountIdByRequestParam(request);
         if (!accounts.containsKey(accountId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+            throw new BusinessException(HttpStatus.NOT_FOUND);
         }
         return new KeyPairValue<>(accountId, accounts.get(accountId));
     }
@@ -113,7 +112,7 @@ public class RinhaHandler {
             return Integer.parseInt(request.pathVariable("accountId"));
         } catch (NumberFormatException nfe) {
             log.warn("Invalid data", nfe);
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
+            throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
 }

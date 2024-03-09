@@ -25,7 +25,6 @@ import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.server.WebFilter;
 import reactor.core.publisher.Mono;
@@ -75,9 +74,9 @@ public class RinhaApplication {
                     response.setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
                     return response.setComplete();
                 })
-                .onErrorResume(ResponseStatusException.class, e -> {
+                .onErrorResume(BusinessException.class, e -> {
                     ServerHttpResponse response = exchange.getResponse();
-                    response.setStatusCode(e.getStatusCode());
+                    response.setRawStatusCode(e.getStatusCode());
                     return response.setComplete();
                 });
     }
